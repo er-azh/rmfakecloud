@@ -81,6 +81,7 @@ const (
 	envMQTTPort          = "MQTT_PORT"
 	envICEServers        = "ICE_SERVERS"
 	envHashSchemaVersion = "HASH_SCHEMA_VERSION"
+	envExporter          = "RM_EXPORTER"
 )
 
 // Config config
@@ -106,6 +107,7 @@ type Config struct {
 	MQTTPort          string
 	ICEServers        []interface{}
 	HashSchemaVersion string
+	Exporter          string
 }
 
 // Verify verify
@@ -284,6 +286,7 @@ func FromEnv() *Config {
 		MQTTPort:          mqttPort,
 		ICEServers:        iceServers,
 		HashSchemaVersion: hashSchemaVersion,
+		Exporter:          os.Getenv(envExporter),
 	}
 	return &cfg
 }

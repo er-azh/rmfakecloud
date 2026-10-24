@@ -3,6 +3,7 @@ package fs
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -128,6 +129,16 @@ func (fs *FileSystemStorage) Export(uid, docid string) (r io.ReadCloser, err err
 	}
 	ls := fs.BlobStorage(uid)
 
+	if fs.Cfg.Exporter != "" {
+		pdf, err := fs.exportExternal(uid, docid)
+		if err == nil {
+			return io.NopCloser(bytes.NewReader(pdf)), nil
+		}
+		if !errors.Is(err, exporter.ErrUnsupported) {
+			log.Warnf("external exporter failed for %s, using the built-in one: %v", docid, err)
+		}
+	}
+
 	archive, err := models.ArchiveFromHashDoc(doc, ls)
 	if err != nil {
 		return nil, err
@@ -143,6 +154,16 @@ func (fs *FileSystemStorage) Export(uid, docid string) (r io.ReadCloser, err err
 		writer.Close()
 	}()
 	return reader, err
+}
+
+func (fs *FileSystemStorage) exportExternal(uid, docid string) ([]byte, error) {
+	rmdoc, err := fs.ExportRmDoc(uid, docid)
+	if err != nil {
+		return nil, err
+	}
+	defer rmdoc.Close()
+	e := exporter.External{Command: fs.Cfg.Exporter, Timeout: 5 * time.Minute}
+	return e.Export(context.Background(), rmdoc)
 }
 
 // UpdateBlobDocument updates metadata
